@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "protobuf >=3.5.0, < 4.0dev", "grpcio >= 1.42.0", "google-api-python-client >= 2.53.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "groq"
+version = "0.0.2"
+authors = [
+  { name="Groq", email="contact@groq.com" },
+]
+description = "The Groq Python API"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/groq/groqapi-py-sdk"
+"Bug Tracker" = "https://github.com/groq/groqapi-py-sdk/issues"
