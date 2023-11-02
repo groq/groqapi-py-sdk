@@ -95,7 +95,7 @@ Prompt: What are transformers in machine learning
 
 Request ID: 2XUQlIAUbWKN9wxfUwcBoHl0qVr
 Output:
- In machine learning, transformers are a type of neural network architecture that is commonly used for natural language processing tasks such as language translation, language modeling, and text classification. Transformers were introduced in a paper by Vaswani et al. in 2017 and have since become widely used in the field.
+In machine learning, transformers are a type of neural network architecture that is commonly used for natural language processing tasks such as language translation, language modeling, and text classification. Transformers were introduced in a paper by Vaswani et al. in 2017 and have since become widely used in the field.
 
 The key innovation of transformers is the self-attention mechanism, which allows the model to attend to different parts of the input sequence simultaneously and weigh their importance. This is in contrast to traditional recurrent neural networks (RNNs), which process the input sequence one element at a time and have recurrence connections that allow them to capture long-range dependencies.
 
