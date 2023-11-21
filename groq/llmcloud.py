@@ -3,6 +3,9 @@ import requests
 import sys
 import grpc
 from datetime import datetime
+from typing import Union
+from typing import Literal
+from typing import Any
 
 sys.path.append(os.path.join(sys.path[0], "protogen"))
 from public.llmcloud.requestmanager.v1 import (
@@ -59,7 +62,7 @@ class GroqGrpcConnection:
         return query_channel
 
     def __init__(self):
-        self._grpc_channel = self._open_grpc_channel()
+        return
 
     def __del__(self):
         if self._grpc_channel is not None:
@@ -98,6 +101,7 @@ class ChatCompletion:
         self._model = model
         self._system_prompt = "Give useful and accurate answers."
         self._lastmessages = []
+        self._history_index = 0
 
     def __del__(self):
         self._lastmessages = []
@@ -114,23 +118,34 @@ class ChatCompletion:
     def _update_history(self, user_prompt, response):
         self._lastmessages.append({"user_prompt" : user_prompt, "last_resp" : response})
 
+    def _resp_generator(self, resp_stream):
+        for response in resp_stream:
+            if self._history_index > -1:
+                self._lastmessages[self._history_index]["last_resp"] += response.content
+            yield response
+
     def send_chat(
         self,
         user_prompt = "Write multiple paragraphs",
+        streaming=False,
         seed=1234,
         max_tokens=2048,
         temperature=0.7,
         top_p=0.3,
         top_k=40,
-    ):
+    ) -> Union[tuple[Literal[''], Literal[''], dict] , Any]:
         # Generate request
         request = requestmanager_pb2.GetTextCompletionRequest()
         request.user_prompt = user_prompt
 
+        history_messages = -1
         for msg in self._lastmessages:
+            history_messages += 1
             req = request.history.add()
             req.user_prompt = msg["user_prompt"]
             req.assistant_response = msg["last_resp"]
+
+        self._history_index = history_messages
 
         request.model_id = self._model
         request.system_prompt = self._system_prompt
@@ -141,7 +156,10 @@ class ChatCompletion:
         request.top_k = top_k
 
         try:
-            resp = self._stub.GetTextCompletion(request)
+            if streaming == True:
+                resp_stream = self._stub.GetTextCompletionStream(request)
+            else:
+                resp = self._stub.GetTextCompletion(request)
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
                 print('Invalid Args. Please check model name and other params')
@@ -151,10 +169,12 @@ class ChatCompletion:
                 raise e
             return "", "", {}
 
-        # Save last messages
-        self._update_history(user_prompt, resp.content)
-
-        return resp.content, resp.request_id, resp.stats
+        if streaming == True:
+            self._update_history(user_prompt, "")
+            return self._resp_generator(resp_stream=resp_stream)
+        else:
+            self._update_history(user_prompt, resp.content)
+            return resp.content, resp.request_id, resp.stats
 
 class Completion:
     def __init__(self):
@@ -173,17 +193,22 @@ class Completion:
     def __exit__(self, *args: object) -> None:
         return None
 
+    def _resp_generator(self, resp_stream):
+        for response in resp_stream:
+            yield response
+
     def send_prompt(
         self,
         model,
         user_prompt = "Write multiple paragraphs",
         system_prompt="Give useful and accurate answers.",
+        streaming=False,
         seed=1234,
         max_tokens=2048,
         temperature=0.7,
         top_p=0.3,
         top_k=40,
-    ):
+    ) -> Union[tuple[Literal[''], Literal[''], dict] , Any]:
         # Generate request
         request = requestmanager_pb2.GetTextCompletionRequest()
         request.user_prompt = user_prompt
@@ -196,7 +221,10 @@ class Completion:
         request.top_k = top_k
 
         try:
-            resp = self._stub.GetTextCompletion(request)
+            if streaming == True:
+                resp_stream = self._stub.GetTextCompletionStream(request)
+            else:
+                resp = self._stub.GetTextCompletion(request)
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
                 print('Invalid Args. Please check model name and other params')
@@ -206,4 +234,7 @@ class Completion:
                 raise e
             return "", "", {}
         
-        return resp.content, resp.request_id, resp.stats
+        if streaming == True:
+            return self._resp_generator(resp_stream=resp_stream)
+        else:
+            return resp.content, resp.request_id, resp.stats
